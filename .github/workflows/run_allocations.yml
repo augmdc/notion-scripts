@@ -1,0 +1,23 @@
+name: Run Allocations
+on:
+  workflow_dispatch: {}          # run manually
+  schedule:
+    - cron: "*/10 * * * *"       # run every 10 minutes (UTC)
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Generate/refresh allocations
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          MASTER_DB_ID: ${{ secrets.MASTER_DB_ID }}
+          WEEKS_DB_ID:  ${{ secrets.WEEKS_DB_ID }}
+          ALLOCS_DB_ID: ${{ secrets.ALLOCS_DB_ID }}
+          JOBS_DB_ID:   ${{ secrets.JOBS_DB_ID }}
+        run: python run_allocations.py

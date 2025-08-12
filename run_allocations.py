@@ -16,7 +16,7 @@ P_TASK_NAME    = "Name"
 P_TYPE         = "Type"          # Activity / Deliverable
 P_START        = "Start"
 P_DUE          = "Due"
-P_HOURS_EST    = "Hours Est (h)"
+P_HOURS_EST    = "Hours Estimated"
 P_WEEK_TITLE   = "Week"          # in Weeks DB, title like 2026-[W]05
 P_WEEK_START   = "Week Start"    # optional date in Weeks DB
 

@@ -14,8 +14,7 @@ RUN_IF_NO_JOB  = os.getenv("RUN_IF_NO_JOB", "false").lower() == "true"
 # Property names (edit if yours differ)
 P_TASK_NAME    = "Name"
 P_TYPE         = "Type"          # Activity / Deliverable
-P_START        = "Start"
-P_DUE          = "Due"
+P_DATE_RANGE  = "Duration / Due Date"
 P_HOURS_EST    = "Hours Estimated"
 P_WEEK_TITLE   = "Week"          # in Weeks DB, title like 2026-[W]05
 P_WEEK_START   = "Week Start"    # optional date in Weeks DB
@@ -64,6 +63,12 @@ def fetch_weeks_index():
 def iso_week_label(dt):
     return dt.strftime("%G-[W]%V")
 
+def get_range(props):
+    d = props[P_DATE_RANGE]["date"]
+    start_iso = d["start"]
+    end_iso = d.get("end") or d["start"]
+    return start_iso, end_iso
+
 def mondays_between(start_dt, end_dt):
     # snap to Monday on/after start
     s = start_dt
@@ -110,9 +115,9 @@ def run():
     tasks = []
     filter_ = {"and": [
         {"property": P_TYPE, "select": {"equals": "Activity"}},
-        {"property": P_START, "date": {"is_not_empty": True}},
-        {"property": P_DUE, "date": {"is_not_empty": True}}
+        {"property": P_DATE_RANGE, "date": {"is_not_empty": True}}
     ]}
+
     while True:
         res = notion.databases.query(database_id=MASTER_DB_ID, filter=filter_, start_cursor=cursor) if cursor \
               else notion.databases.query(database_id=MASTER_DB_ID, filter=filter_)
@@ -126,8 +131,7 @@ def run():
         name_items = props[P_TASK_NAME]["title"]
         name = name_items[0]["plain_text"] if name_items else "(untitled)"
 
-        start_iso = props[P_START]["date"]["start"]
-        due_iso   = props[P_DUE]["date"]["start"]
+        start_iso, due_iso = get_range(props)
         # Normalize to datetimes
         s = datetime.fromisoformat(start_iso.replace("Z","+00:00"))
         e = datetime.fromisoformat(due_iso.replace("Z","+00:00"))
@@ -146,7 +150,7 @@ def run():
         for i, w in enumerate(weeks):
             label = iso_week_label(w)
             week_id = idx_by_title.get(label)
-            if not week_id and P_WEEK_START in idx_by_date:
+            if not week_id:
                 week_id = idx_by_date.get(w.date().isoformat())
             if not week_id:
                 # skip if week missing

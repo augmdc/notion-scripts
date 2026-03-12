@@ -20,7 +20,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install notion-client
+        run: pip install -r requirements.txt
 
       - name: Create Weekly Review entry
         env:

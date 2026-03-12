@@ -1,0 +1,29 @@
+name: Shift Report Reminder
+
+on:
+  schedule:
+    # Every Sunday at 8:00 PM Eastern (Monday 01:00 UTC)
+    - cron: "0 1 * * 1"
+  workflow_dispatch:
+
+jobs:
+  send-reminder:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Add Shift Report reminder
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          WEEKLY_REVIEW_DB_ID: ${{ secrets.WEEKLY_REVIEW_DB_ID }}
+        run: python shift_report_reminder.py

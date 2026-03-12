@@ -1,0 +1,28 @@
+name: Daily Focus Auto-Date
+
+on:
+  schedule:
+    # Every day at 7:00 AM Eastern (12:00 UTC)
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+jobs:
+  update-date:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Update Daily Focus date
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: python daily_focus_autodate.py

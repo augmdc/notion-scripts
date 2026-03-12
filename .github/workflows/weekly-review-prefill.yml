@@ -1,0 +1,29 @@
+name: Weekly Review Pre-fill
+
+on:
+  schedule:
+    # Every Sunday at 10:30 AM Eastern (15:30 UTC) — runs after weekly-review.yml at 15:00
+    - cron: "30 15 * * 0"
+  workflow_dispatch:
+
+jobs:
+  prefill:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Pre-fill Weekly Review
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          WEEKLY_REVIEW_DB_ID: ${{ secrets.WEEKLY_REVIEW_DB_ID }}
+        run: python weekly_review_prefill.py

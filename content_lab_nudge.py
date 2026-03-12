@@ -1,15 +1,18 @@
 import os
 import time
-from datetime import datetime, timedelta, timezone
+import httpx
 from pathlib import Path
-from notion_client import Client
 
 NOTION_TOKEN      = os.environ["NOTION_TOKEN"]
 AUTOMATIONS_PAGE  = "321b9483a96281faa6a3cc1f6988bdd9"
 DRAFTS_DIR        = Path.home() / "Documents/Atlas/Content Lab/1. Production Pipeline/10. Drafts"
 STALE_DAYS        = 14
 
-notion = Client(auth=NOTION_TOKEN)
+HEADERS = {
+    "Authorization": f"Bearer {NOTION_TOKEN}",
+    "Notion-Version": "2022-06-28",
+    "Content-Type": "application/json",
+}
 
 
 def get_stale_drafts() -> list[tuple[str, int]]:
@@ -25,16 +28,30 @@ def get_stale_drafts() -> list[tuple[str, int]]:
 
 
 def post_nudge(stale: list[tuple[str, int]]) -> None:
-    lines = [f"• {name} ({days}d idle)" for name, days in stale]
-    message = (
-        f"📝 Content Lab nudge — {len(stale)} draft(s) idle for {STALE_DAYS}+ days:\n\n"
-        + "\n".join(lines)
+    from datetime import date
+    lines = "\n".join(f"- [ ] {name} ({days}d idle)" for name, days in stale)
+    title = f"📝 Stale Drafts — {date.today().strftime('%b %-d')}"
+    content = f"These drafts have had no changes for {STALE_DAYS}+ days. Pick one or archive it.\n\n{lines}"
+
+    resp = httpx.post(
+        "https://api.notion.com/v1/pages",
+        headers=HEADERS,
+        json={
+            "parent": {"page_id": AUTOMATIONS_PAGE},
+            "properties": {
+                "title": {"title": [{"type": "text", "text": {"content": title}}]}
+            },
+            "children": [{
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [{"type": "text", "text": {"content": content}}]
+                }
+            }]
+        }
     )
-    notion.comments.create(
-        parent={"page_id": AUTOMATIONS_PAGE},
-        rich_text=[{"text": {"content": message}}]
-    )
-    print(f"Posted nudge: {len(stale)} stale draft(s)")
+    resp.raise_for_status()
+    print(f"Created nudge page: {title}")
     for name, days in stale:
         print(f"  {name} ({days}d)")
 

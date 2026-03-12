@@ -2,40 +2,45 @@ import os
 from datetime import datetime, timedelta, timezone
 from notion_client import Client
 
-NOTION_TOKEN       = os.environ["NOTION_TOKEN"]
-DAILY_FOCUS_PAGE_ID = "2d8b9483a962803c9564fbae0c35ffd3"
+NOTION_TOKEN        = os.environ["NOTION_TOKEN"]
+DAILY_FOCUS_DB      = "aee8c3a1617444378062040092ce5101"
 
 notion = Client(auth=NOTION_TOKEN)
 
 
-def get_today_label() -> str:
-    """Returns 'Mon DD' in Eastern time."""
-    eastern = datetime.now(timezone.utc) - timedelta(hours=5)  # EST (UTC-5)
-    return eastern.strftime("%b %-d")
+def get_today_eastern() -> datetime:
+    """Return current datetime in Eastern time (UTC-5, no DST handling needed for daily cron)."""
+    return datetime.now(timezone.utc) - timedelta(hours=5)
 
 
-def update_date():
-    today = get_today_label()
-    new_title = f"💡 Daily Focus — {today}"
+def entry_exists_today(date_str: str) -> bool:
+    """Check if a Daily Focus entry already exists for this date."""
+    results = notion.databases.query(
+        database_id=DAILY_FOCUS_DB,
+        filter={"property": "Day", "date": {"equals": date_str}}
+    )
+    return len(results["results"]) > 0
 
-    page = notion.pages.retrieve(page_id=DAILY_FOCUS_PAGE_ID)
-    current = ""
-    title_prop = page["properties"].get("title", {}).get("title", [])
-    if title_prop:
-        current = title_prop[0]["plain_text"]
 
-    if today in current:
-        print(f"Already up to date: {current}")
-        return
-
-    notion.pages.update(
-        page_id=DAILY_FOCUS_PAGE_ID,
+def create_entry(label: str, date_str: str) -> None:
+    notion.pages.create(
+        parent={"database_id": DAILY_FOCUS_DB},
         properties={
-            "title": {"title": [{"text": {"content": new_title}}]}
+            "Date": {"title": [{"text": {"content": label}}]},
+            "Day": {"date": {"start": date_str}}
         }
     )
-    print(f"Updated to: {new_title}")
+    print(f"Created Daily Focus entry: {label}")
 
 
 if __name__ == "__main__":
-    update_date()
+    today = get_today_eastern()
+    date_str = today.strftime("%Y-%m-%d")
+    label = today.strftime("%b %-d")
+
+    print(f"Checking for Daily Focus entry: {label}")
+
+    if entry_exists_today(date_str):
+        print("Entry already exists — skipping.")
+    else:
+        create_entry(label, date_str)

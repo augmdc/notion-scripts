@@ -18,24 +18,41 @@ def get_week_label() -> str:
     return monday.strftime("Week of %b %-d")
 
 
-def get_completed_tasks() -> list[str]:
-    """Return names of tasks marked Done in the last 7 days."""
-    one_week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+def get_week_bounds() -> tuple[str, str]:
+    """Return ISO strings for last Monday 00:00 and today 23:59 (Sunday)."""
+    today = datetime.now(timezone.utc).replace(hour=23, minute=59, second=59)
+    last_monday = (today - timedelta(days=6)).replace(hour=0, minute=0, second=0)
+    return last_monday.isoformat(), today.isoformat()
+
+
+def get_completed_tasks() -> dict[str, list[str]]:
+    """Return tasks marked Done with a due date in the past week, grouped by track."""
+    week_start, week_end = get_week_bounds()
+
     results = notion.databases.query(
         database_id=TASKS_DB,
         filter={
             "and": [
                 {"property": "Status", "status": {"equals": "Done"}},
-                {"timestamp": "last_edited_time", "last_edited_time": {"after": one_week_ago}}
+                {"property": "Due Date", "date": {"on_or_after": week_start[:10]}},
+                {"property": "Due Date", "date": {"on_or_before": week_end[:10]}}
             ]
         }
     )
-    tasks = []
+
+    by_track: dict[str, list[str]] = {"PhD": [], "AI Learning": [], "Other": []}
     for page in results["results"]:
         title_parts = page["properties"].get("Name", {}).get("title", [])
-        if title_parts:
-            tasks.append(title_parts[0]["plain_text"])
-    return tasks
+        name = title_parts[0]["plain_text"] if title_parts else "(untitled)"
+
+        track_prop = page["properties"].get("Track", {}).get("select")
+        track = track_prop["name"] if track_prop else "Other"
+        if track not in by_track:
+            track = "Other"
+
+        by_track[track].append(name)
+
+    return by_track
 
 
 def find_weekly_review(label: str) -> str | None:
@@ -48,13 +65,20 @@ def find_weekly_review(label: str) -> str | None:
     return None
 
 
-def prefill(page_id: str, tasks: list[str]) -> None:
-    if not tasks:
-        print("No completed tasks this week — skipping prefill.")
+def prefill(page_id: str, by_track: dict[str, list[str]]) -> None:
+    total = sum(len(v) for v in by_track.values())
+    if total == 0:
+        print("No completed tasks with due dates this week — skipping prefill.")
         return
 
-    lines = [f"• {t}" for t in tasks[:15]]  # cap at 15
-    summary = f"{len(tasks)} task(s) completed this week:\n" + "\n".join(lines)
+    lines = []
+    for track, tasks in by_track.items():
+        if tasks:
+            lines.append(f"{track}:")
+            lines.extend(f"  • {t}" for t in tasks)
+            lines.append("")
+
+    summary = f"{total} task(s) completed this week:\n\n" + "\n".join(lines).rstrip()
 
     notion.pages.update(
         page_id=page_id,
@@ -64,18 +88,22 @@ def prefill(page_id: str, tasks: list[str]) -> None:
             }
         }
     )
-    print(f"Pre-filled 'What Moved' with {len(tasks)} task(s).")
+    print(f"Pre-filled 'What Moved' with {total} task(s) across {sum(1 for v in by_track.values() if v)} track(s).")
 
 
 if __name__ == "__main__":
     label = get_week_label()
     print(f"Pre-filling: {label}")
 
-    tasks = get_completed_tasks()
-    print(f"Found {len(tasks)} completed task(s) in the last 7 days.")
+    by_track = get_completed_tasks()
+    total = sum(len(v) for v in by_track.values())
+    print(f"Found {total} completed task(s) in the past week.")
+    for track, tasks in by_track.items():
+        if tasks:
+            print(f"  {track}: {len(tasks)}")
 
     page_id = find_weekly_review(label)
     if page_id:
-        prefill(page_id, tasks)
+        prefill(page_id, by_track)
     else:
         print("Weekly review not found — run create_weekly_review.py first.")

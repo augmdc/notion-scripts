@@ -2,8 +2,9 @@ name: Daily Focus Auto-Date
 
 on:
   schedule:
-    # Every day at 7:00 AM Eastern (12:00 UTC)
-    - cron: "0 12 * * *"
+    # Every day at 05:00 ET (09:00 UTC during EDT, 10:00 UTC during EST)
+    # Using 09:00 UTC to guarantee arrival before 07:00 ET year-round
+    - cron: "0 9 * * *"
   workflow_dispatch:
 
 jobs:

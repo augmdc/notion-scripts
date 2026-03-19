@@ -1,5 +1,6 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from notion_client import Client
 
 # ---- ENV VARS ----
@@ -11,7 +12,7 @@ notion = Client(auth=NOTION_TOKEN)
 
 def get_week_label() -> str:
     """Returns 'Week of Mon DD' for the coming Monday (start of the work week)."""
-    today = datetime.now(timezone.utc)
+    today = datetime.now(ZoneInfo("America/New_York"))
     # Run on Sunday — label the week that starts tomorrow (Monday)
     days_until_monday = (7 - today.weekday()) % 7
     if days_until_monday == 0:

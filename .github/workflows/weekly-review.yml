@@ -2,8 +2,9 @@ name: Create Weekly Review Entry
 
 on:
   schedule:
-    # Every Sunday at 10:00 AM Eastern (15:00 UTC)
-    - cron: "0 15 * * 0"
+    # Every Sunday at 10:00 ET (14:00 UTC during EDT, 15:00 UTC during EST)
+    # Using 14:00 UTC to keep 10:00 ET during DST
+    - cron: "0 14 * * 0"
   workflow_dispatch:  # allow manual trigger for testing
 
 jobs:

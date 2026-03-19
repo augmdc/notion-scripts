@@ -1,9 +1,11 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from notion_client import Client
 
 NOTION_TOKEN        = os.environ["NOTION_TOKEN"]
 DAILY_FOCUS_DB      = "aee8c3a1617444378062040092ce5101"
+ET                  = ZoneInfo("America/New_York")
 
 notion = Client(auth=NOTION_TOKEN)
 
@@ -20,8 +22,8 @@ GOAL_AREAS = [
 
 
 def get_today_eastern() -> datetime:
-    """Return current datetime in Eastern time (UTC-5, no DST handling needed for daily cron)."""
-    return datetime.now(timezone.utc) - timedelta(hours=5)
+    """Return current datetime in America/New_York (handles EST/EDT automatically)."""
+    return datetime.now(ET)
 
 
 def entry_exists_today(date_str: str) -> bool:

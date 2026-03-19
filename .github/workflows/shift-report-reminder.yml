@@ -2,8 +2,9 @@ name: Shift Report Reminder
 
 on:
   schedule:
-    # Every Sunday at 8:00 PM Eastern (Monday 01:00 UTC)
-    - cron: "0 1 * * 1"
+    # Every Sunday at 20:00 ET (Mon 00:00 UTC during EDT, Mon 01:00 UTC during EST)
+    # Using 00:00 UTC Monday to keep 20:00 ET during DST
+    - cron: "0 0 * * 1"
   workflow_dispatch:
 
 jobs:

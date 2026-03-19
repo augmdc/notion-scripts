@@ -1,5 +1,6 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from notion_client import Client
 
 NOTION_TOKEN      = os.environ["NOTION_TOKEN"]
@@ -10,7 +11,7 @@ notion = Client(auth=NOTION_TOKEN)
 
 
 def get_week_label() -> str:
-    today = datetime.now(timezone.utc)
+    today = datetime.now(ZoneInfo("America/New_York"))
     days_until_monday = (7 - today.weekday()) % 7
     if days_until_monday == 0:
         days_until_monday = 7
@@ -20,7 +21,7 @@ def get_week_label() -> str:
 
 def get_week_bounds() -> tuple[str, str]:
     """Return ISO strings for last Monday 00:00 and today 23:59 (Sunday)."""
-    today = datetime.now(timezone.utc).replace(hour=23, minute=59, second=59)
+    today = datetime.now(ZoneInfo("America/New_York")).replace(hour=23, minute=59, second=59)
     last_monday = (today - timedelta(days=6)).replace(hour=0, minute=0, second=0)
     return last_monday.isoformat(), today.isoformat()
 

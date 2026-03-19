@@ -1,5 +1,6 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from notion_client import Client
 
 NOTION_TOKEN      = os.environ["NOTION_TOKEN"]
@@ -10,7 +11,7 @@ notion = Client(auth=NOTION_TOKEN)
 
 def get_week_label() -> str:
     """Returns the label for the current week (coming Monday from Sunday evening)."""
-    today = datetime.now(timezone.utc)
+    today = datetime.now(ZoneInfo("America/New_York"))
     days_until_monday = (7 - today.weekday()) % 7
     if days_until_monday == 0:
         days_until_monday = 7

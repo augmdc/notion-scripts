@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from notion_client import Client
 
@@ -26,7 +26,20 @@ def get_today_eastern() -> datetime:
     return datetime.now(ET)
 
 
-def entry_exists_today(date_str: str) -> bool:
+def get_week_days() -> list:
+    """Return the seven dates of the coming week (Monday through Sunday).
+
+    Run on Sunday — build the week that starts tomorrow (Monday).
+    """
+    today = get_today_eastern()
+    days_until_monday = (7 - today.weekday()) % 7
+    if days_until_monday == 0:
+        days_until_monday = 7
+    monday = today + timedelta(days=days_until_monday)
+    return [monday + timedelta(days=offset) for offset in range(7)]
+
+
+def entry_exists(date_str: str) -> bool:
     """Check if a Daily Focus entry already exists for this date."""
     results = notion.databases.query(
         database_id=DAILY_FOCUS_DB,
@@ -85,13 +98,13 @@ def create_entry(label: str, date_str: str) -> None:
 
 
 if __name__ == "__main__":
-    today = get_today_eastern()
-    date_str = today.strftime("%Y-%m-%d")
-    label = today.strftime("%b %-d")
+    for day in get_week_days():
+        date_str = day.strftime("%Y-%m-%d")
+        label = day.strftime("%b %-d")
 
-    print(f"Checking for Daily Focus entry: {label}")
+        print(f"Checking for Daily Focus entry: {label}")
 
-    if entry_exists_today(date_str):
-        print("Entry already exists — skipping.")
-    else:
-        create_entry(label, date_str)
+        if entry_exists(date_str):
+            print("Entry already exists — skipping.")
+        else:
+            create_entry(label, date_str)
